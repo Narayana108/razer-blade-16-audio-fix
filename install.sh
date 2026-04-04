@@ -9,15 +9,19 @@
 #   chmod +x razer-blade-16-audio-fix.sh && sudo ./razer-blade-16-audio-fix.sh
 #
 # Fixes:
-#   1. Speakers produce no sound (ALC298 codec not initialized)
+#   1. Speakers produce no sound (ALC298 / sof codec not initialized)
 #   2. No automatic headphone/speaker switching when plugging 3.5mm
 #   3. Periodic hissing on 3.5mm headphone output
 #   4. Audio pausing when switching between devices
 #   5. Static/crackling in games outputting at 44100Hz (sample rate mismatch)
 #
-# Tested: Razer Blade 16 (RZ09-0510) with ALC298 codec
+# Orignal code was Tested on: Razer Blade 16 (RZ09-0510) with ALC298 codec
 # Requires: PipeWire, WirePlumber, alsa-tools (hda-verb)
 #
+# It didnt work for my Arch (omarchy 3.5.0) env, so I forked orignal repo
+# and slightly modified the script that the systemctl commands could run on my env
+# Tested and working on: Razer Blade 16 (RZ09-0510)(2024)
+# might also require: sof-firmware
 
 set -euo pipefail
 VERSION="2.0.0"
@@ -30,6 +34,10 @@ log_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
 
 REAL_USER="${SUDO_USER:-$USER}"
 REAL_HOME=$(eval echo "~$REAL_USER")
+
+REAL_UID=$(id -u "$REAL_USER")
+XDG_RUNTIME_DIR="/run/user/$REAL_UID"
+
 
 check_root() {
     [[ $EUID -eq 0 ]] || { log_error "Run with sudo"; exit 1; }
@@ -85,7 +93,6 @@ DEV="/dev/snd/hwC${CARD_NUM}D0"
 [[ ! -c "$DEV" ]] && { echo "[$(date)] ERROR: $DEV not found" >> "$LOG"; exit 1; }
 echo "[$(date)] Device: $DEV" >> "$LOG"
 
-SPEAKER_SCRIPT
 # HDA-VERB COMMANDS START
 hda-verb $DEV 0x20 0x500 0x7
 hda-verb $DEV 0x20 0x500 0x7
@@ -2315,16 +2322,16 @@ install_sudoers() {
 
 enable_user_services() {
     log_step "Enabling user services..."
-    su - "$REAL_USER" -c "systemctl --user daemon-reload"
-    su - "$REAL_USER" -c "systemctl --user enable razer-blade-audio-daemon.service"
+    sudo -u "$REAL_USER" XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl --user daemon-reload
+    sudo -u "$REAL_USER" XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl --user enable razer-blade-audio-daemon.service
 }
 
 restart_audio() {
     log_step "Restarting audio..."
     /usr/local/bin/razer-blade-speaker-fix.sh || true
-    su - "$REAL_USER" -c "systemctl --user restart pipewire wireplumber" || true
+    sudo -u "$REAL_USER" XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl --user restart pipewire wireplumber || true
     sleep 2
-    su - "$REAL_USER" -c "systemctl --user start razer-blade-audio-daemon" || true
+    sudo -u "$REAL_USER" XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl --user start razer-blade-audio-daemon || true
 }
 
 show_complete() {

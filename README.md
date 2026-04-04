@@ -24,8 +24,28 @@ Other Razer laptops with ALC298 codec may also work.
 - Linux with PipeWire and WirePlumber
 - systemd
 - `alsa-tools` package (installed automatically)
+- sof-firmware
 
 Tested on Arch Linux, should work on Fedora, Ubuntu 24.04+, and other modern distros.
+
+# Modifications from original:
+Original code [litesung/razer-blade-16-audio-fix](https://github.com/Litesung/razer-blade-16-audio-fix)
+
+Tested and working on Omarchy 3.5.0 (Arch Linux)
+
+Removed one redundant function SPEAKER_SCRIPT on line 88, causing the script to crash
+
+And replaced:
+
+```bash
+su - "$REAL_USER" -c "systemctl
+```
+
+with:
+
+```bash
+sudo -u "$REAL_USER" XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl
+```
 
 ## Quick Install
 
