@@ -47,6 +47,9 @@ with:
 sudo -u "$REAL_USER" XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl
 ```
 
+
+`RB16_2024_enable_internal_speaker.sh` is a quick fix to get the laptop audio working, but doesnt solve all the above issues.
+
 ## Quick Install
 
 ```bash
