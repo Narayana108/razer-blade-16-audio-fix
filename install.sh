@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Razer Blade 16 Complete Audio Fix
+# Razer Blade 16 Complete Audio Fix - Version2
 # Self-contained installer for speakers, headphone switching, and hissing fix
 #
 # Usage:
@@ -12,16 +12,18 @@
 #   1. Speakers produce no sound (ALC298 / sof codec not initialized)
 #   2. No automatic headphone/speaker switching when plugging 3.5mm
 #   3. Periodic hissing on 3.5mm headphone output
-#   4. Audio pausing when switching between devices
+#   4. Audio pausing when switching between device
 #   5. Static/crackling in games outputting at 44100Hz (sample rate mismatch)
 #
 # Orignal code was Tested on: Razer Blade 16 (RZ09-0510) with ALC298 codec
 # Requires: PipeWire, WirePlumber, alsa-tools (hda-verb)
 #
-# It didnt work for my Arch (omarchy 3.5.0) env, so I forked orignal repo
-# and slightly modified the script that the systemctl commands could run on my env
-# Tested and working on: Razer Blade 16 (RZ09-0510)(2024)
-# might also require: sof-firmware
+# VERSION 2
+# 1. No automatic headphone/speaker switching when plugging USB Audio device
+# 2. Fixed script to work on Arch Linux (Omarchy 3.5.0)
+#
+# Tested on: Razer Blade 16 (RZ09-0510)(2024)
+# might additionally require: sof-firmware
 
 set -euo pipefail
 VERSION="2.0.0"
@@ -2216,17 +2218,22 @@ install_daemon() {
     cat > "$REAL_HOME/.local/bin/razer-blade-audio-daemon" << 'DAEMON'
 #!/bin/bash
 # Razer Blade audio daemon - "last connected wins"
+# Version2 - Added USB audio device support
 CARD="alsa_card.pci-0000_00_1f.3-platform-skl_hda_dsp_generic"
 SPEAKER_PROFILE="HiFi (HDMI1, HDMI2, HDMI3, Mic1, Mic2, Speaker)"
 HEADPHONE_PROFILE="HiFi (HDMI1, HDMI2, HDMI3, Headphones, Mic1, Mic2)"
 VIRTUAL_SINK="Main-Output"
 POLL_INTERVAL=1
-CURRENT_OUTPUT="" PREV_JACK="" PREV_BT=""
+CURRENT_OUTPUT="" PREV_JACK="" PREV_USB="" PREV_BT="" 
 
 get_jack() {
     local v=$(sudo hda-verb /dev/snd/hwC1D0 0x21 GET_PIN_SENSE 0 2>/dev/null | grep "value = " | awk '{print $3}')
     [[ "$v" = "0x80000000" ]] && echo "plugged" || echo "unplugged"
 }
+get_usb() { 
+  pactl list sinks short 2>/dev/null | grep -i "usb" | awk '{print $2}' | head -1;
+}
+
 get_bt() { pactl list sinks short 2>/dev/null | grep -i "bluez_output" | awk '{print $2}' | head -1; }
 move_streams() { pactl list sink-inputs short 2>/dev/null | awk '{print $1}' | while read id; do pactl move-sink-input "$id" "$1" 2>/dev/null; done; }
 wait_sink() { for i in $(seq 1 30); do local s=$(pactl list sinks short 2>/dev/null | grep -i "$1" | grep -v "$VIRTUAL_SINK" | awk '{print $2}' | head -1); [[ -n "$s" ]] && { echo "$s"; return; }; sleep 0.1; done; }
@@ -2246,6 +2253,11 @@ to_headphones() {
     local s=$(wait_sink "Headphone"); [[ -n "$s" ]] && { link_to "$s"; pactl set-sink-volume "$s" 100% 2>/dev/null; }
     CURRENT_OUTPUT="headphones"
 }
+to_usb() {
+    echo "$(date): → USB Audio"
+    pactl set-default-sink "$1" 2>/dev/null; move_streams "$1"
+    CURRENT_OUTPUT="usb:$1"
+}
 to_bt() {
     echo "$(date): → Bluetooth"
     pactl set-default-sink "$1" 2>/dev/null; move_streams "$1"
@@ -2259,21 +2271,23 @@ to_speakers() {
     CURRENT_OUTPUT="speakers"
 }
 fallback() {
-    local j=$(get_jack) b=$(get_bt)
+local j=$(get_jack) u=$(get_usb) b=$(get_bt)
     [[ "$j" = "plugged" ]] && { to_headphones; return; }
+    [[ -n "$u" ]] && { to_usb "$u"; return; }
     [[ -n "$b" ]] && { to_bt "$b"; return; }
     to_speakers
 }
 
 trap 'exit 0' SIGTERM SIGINT
 echo "$(date): Audio daemon starting"
-PREV_JACK=$(get_jack); PREV_BT=$(get_bt)
-[[ "$PREV_JACK" = "plugged" ]] && to_headphones || { [[ -n "$PREV_BT" ]] && to_bt "$PREV_BT" || to_speakers; }
+PREV_JACK=$(get_jack); PREV_USB=$(get_usb); PREV_BT=$(get_bt)
+[[ "$PREV_JACK" = "plugged" ]] && to_headphones || { [[ -n "$PREV_USB" ]] && to_usb "$PREV_USB" || [[ -n "$PREV_BT" ]] && to_bt "$PREV_BT" || to_speakers; }
 
 while true; do
     sleep "$POLL_INTERVAL"
-    j=$(get_jack); b=$(get_bt)
+  j=$(get_jack); u=$(get_usb); b=$(get_bt)
     [[ "$j" != "$PREV_JACK" ]] && { [[ "$j" = "plugged" ]] && to_headphones || { [[ "$CURRENT_OUTPUT" = "headphones" ]] && fallback; }; PREV_JACK="$j"; }
+    [[ "$u" != "$PREV_USB" ]] && { [[ -z "$PREV_USB" && -n "$u" ]] && to_usb "$u"; [[ -n "$PREV_USB" && -z "$u" && "$CURRENT_OUTPUT" = usb:* ]] && fallback; PREV_USB="$u"; }
     [[ "$b" != "$PREV_BT" ]] && { [[ -z "$PREV_BT" && -n "$b" ]] && to_bt "$b"; [[ -n "$PREV_BT" && -z "$b" && "$CURRENT_OUTPUT" = bluetooth:* ]] && fallback; PREV_BT="$b"; }
 done
 DAEMON

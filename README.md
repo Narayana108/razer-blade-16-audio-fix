@@ -1,6 +1,6 @@
 # Razer Blade 16 Audio Fix
 
-Complete audio fix for Razer Blade 16 (2023/2024) on Linux. Fixes speakers, automatic headphone switching, audio hissing, and game audio static.
+Complete audio fix for Razer Blade 16 (2023/2024) on Linux. Fixes speakers, automatic headphone switching (3.5mm jack, USB & BT device support), audio hissing, and game audio static.
 
 ## Problems Solved
 
@@ -47,8 +47,8 @@ with:
 sudo -u "$REAL_USER" XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl
 ```
 
-
-`RB16_2024_enable_internal_speaker.sh` is a quick fix for silent speakers issue, but doesnt solve remaining above issues.
+`RB16_2024_enable_internal_speaker.sh` is a standalone script for quick fix for silent speakers issue (used in testing).
+`razer-blade-audio-daemon` is a standalone script for audio device switching (used in testing).
 
 ## Quick Install
 
