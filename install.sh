@@ -12,7 +12,7 @@
 #   1. Speakers produce no sound (ALC298 / sof codec not initialized)
 #   2. No automatic headphone/speaker switching when plugging 3.5mm
 #   3. Periodic hissing on 3.5mm headphone output
-#   4. Audio pausing when switching between device
+#   4. Audio pausing when switching between devices
 #   5. Static/crackling in games outputting at 44100Hz (sample rate mismatch)
 #
 # Orignal code was Tested on: Razer Blade 16 (RZ09-0510) with ALC298 codec
