@@ -30,10 +30,7 @@ Tested on Arch Linux, should work on Fedora, Ubuntu 24.04+, and other modern dis
 
 # Modifications from original:
 Original code [litesung/razer-blade-16-audio-fix](https://github.com/Litesung/razer-blade-16-audio-fix)
-
-Tested and working on Omarchy 3.5.0 (Arch Linux).
-
-Removed a redundant function call `SPEAKER_SCRIPT` on line 88, causing the script to crash.
+1. Removed a redundant function call `SPEAKER_SCRIPT` on line 88, causing the script to crash.
 
 And replaced:
 
@@ -47,8 +44,13 @@ with:
 sudo -u "$REAL_USER" XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR systemctl
 ```
 
-`RB16_2024_enable_internal_speaker.sh` is a standalone script for quick fix for silent speakers issue (used in testing).
-`razer-blade-audio-daemon` is a standalone script for audio device switching (used in testing).
+2. Added USB audio devices auto switching
+
+#### Additional info
+Tested and working on Omarchy 3.5.0 (Arch Linux).
+
+- `RB16_2024_enable_internal_speaker.sh` is a standalone script for quick fix for silent speakers issue (used in testing).
+- `razer-blade-audio-daemon` is a standalone script for audio device switching (used in testing).
 
 ## Quick Install
 
